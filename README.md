@@ -1,2 +1,74 @@
-# learnBTC
-Learn btc from 0 to 0.01.
+# Learn BTC
+
+## 一、生成比特币地址
+### （一）围绕《btc地址生成算法详解.pdf》开展测试 `test_mybtc.c`
+1. 第一步，私钥：随机选取一个32字节的数，大小介于1~0xFFFF FFFF FFFF FFFF FFFF FFFF FFFF FFFE BAAE DCE6 AF48 A03B BFD2 5E8C D036 4141之间，作为私钥。
+    - 先略过，用网上现成的：18e14a7b6a307f426a94f8114701e7c8e774e7f9a47e2c2035db29a206321725
+    - 后续，后有随机生成私钥的代码。
+2. 第二步，使用椭圆曲线加密算法（ECDSA-SECP256k1）计算私钥所对应的非压缩公钥（共65字节，1字节0x04，32字节为x坐标，32字节为y坐标）。0450863AD64A87AE8A2FE83C1AF1A8403CB53F53E486D8511DAD8A04887E5B23522CD470243453A299FA9E77237716103ABC11A1DF38855ED6F2EE187E9C582BA6    
+    - 安装加密算法库：`sudo dnf install libsecp256k1-devel`
+    - 编写函数：`private_to_pub(unsigned char* out, int len, unsigned char* in)`
+    ```
+    /*
+    out: HEX格式的公钥地址
+    len: 公钥的字节数 非压缩65 压缩33
+    in:  HEX格式的私钥地址
+    */
+    ```
+    - 安装C测试库：`sudo dnf install CUnit-devel`
+    - 测试代码见test_mybtc.c。：`make test_mybtc && ./test_mybtc`（下同，不再重复说明） 
+3. 第三步，计算公钥的SHA-256哈希值 600FFE422B4E00731A59557A5CCA46CC183944191006324A447BDB2D98D4B408   
+4. 第四步，计算上一步哈希值的RIPEMD-160哈希值 010966776006953D5567439E5E39F86A0D273BEE
+5. 第五步，在上一步结果之间加入地址版本号（如比特币主网版本号"0x00"） 
+00010966776006953D5567439E5E39F86A0D273BEE
+6. 第六步，计算上一步结果的SHA-256哈希值 445C7A8007A93D8733188288BB320A8FE2DEBD2AE1B47F0F50BC10BAE845C094
+7. 第七步，再次计算上一步结果的SHA-256哈希值 D61967F63C7DD183914A4AE452C9F6AD5D462CE3D277798075B107615C1A8A30
+8. 第八步，取上一步结果的前4个字节（8位十六进制数）D61967F6，把这4个字节加在第五步结果的后面，作为校验（这就是比特币地址的16进制形态）
+00010966776006953D5567439E5E39F86A0D273BEED61967F6
+9. 第九步，用base58表示法变换一下地址（这就是最常见的比特币地址形态）
+16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM
+
+### （二）编写生成btc地址的代码 `create_address.c`
+```
+make create_address && ./create_address
+# 后面的数字表示多少个字母。
+# 非压缩公钥:
+private_key: 18e14a7b6a307f426a94f8114701e7c8e774e7f9a47e2c2035db29a206321725 64
+public_key: 0450863AD64A87AE8A2FE83C1AF1A8403CB53F53E486D8511DAD8A04887E5B23522CD470243453A299FA9E77237716103ABC11A1DF38855ED6F2EE187E9C582BA6 130
+pub to sha256: 600FFE422B4E00731A59557A5CCA46CC183944191006324A447BDB2D98D4B408 64
+to ripemd160: 010966776006953D5567439E5E39F86A0D273BEE 40
+add '0x00': 00010966776006953D5567439E5E39F86A0D273BEE 42
+to sha256: 445C7A8007A93D8733188288BB320A8FE2DEBD2AE1B47F0F50BC10BAE845C094 64
+sha256_sha256: D61967F63C7DD183914A4AE452C9F6AD5D462CE3D277798075B107615C1A8A30 64
+address_hex: 00010966776006953D5567439E5E39F86A0D273BEED61967F6 50
+address: 16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM 33
+
+# 压缩公钥:  
+// size_t publen = LENGHT_PUBLIC_CHAR_COMPRESS;    // 压缩
+private_key: 18e14a7b6a307f426a94f8114701e7c8e774e7f9a47e2c2035db29a206321725 64
+public_key: 0250863AD64A87AE8A2FE83C1AF1A8403CB53F53E486D8511DAD8A04887E5B2352 66
+pub to sha256: 0B7C28C9B7290C98D7438E70B3D3F7C848FBD7D1DC194FF83F4F7CC9B1378E98 64
+to ripemd160: F54A5851E9372B87810A8E60CDD2E7CFD80B6E31 40
+add '0x00': 00F54A5851E9372B87810A8E60CDD2E7CFD80B6E31 42
+to sha256: AD3C854DA227C7E99C4ABFAD4EA41D71311160DF2E415E713318C70D67C6B41C 64
+sha256_sha256: C7F18FE8FCBED6396741E58AD259B5CB16B7FD7F041904147BA1DCFFABF747FD 64
+address_hex: 00F54A5851E9372B87810A8E60CDD2E7CFD80B6E31C7F18FE8 50
+address: 1PMycacnJaSqwwJqjawXBErnLsZ7RkXUAs 34
+```
+
+## 二、随机生成私钥 `rand_pri_key.c`
+*btc的私钥是一个256位的二进制数，即32个char，64个hex。*  `make rand_pri_key && ./rand_pri_key`
+
+## 三、随机生成若干私钥和对应的比特币地址 `rand_pri_address.c`
+`make rand_pri_address && ./rand_pri_address`
+
+## 四、私钥碰撞 `crack.c`（从概率上说，这是绝不可能的，不要被骗。）
+这个地址里有10个BTC，但按照现在的计算速度，就算是再过1亿年都撞不对。
+`make crack.c && ./crack`
+
+*有Bug:这个代码很快地就吃掉所有了的内存，而且生成1000个地址都要6.6秒。后来用go写了一版，一点问题都没有。*
+
+## 五、验证字符串 `sign_string.c`
+用私钥对字符串进行签名，然后用公钥验证签名是否属实。
+
+## 六、一些学习资料 `urls.md`
