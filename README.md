@@ -72,3 +72,6 @@ address: 1PMycacnJaSqwwJqjawXBErnLsZ7RkXUAs 34
 用私钥对字符串进行签名，然后用公钥验证签名是否属实。
 
 ## 六、一些学习资料 `urls.md`
+
+## LICENSE
+MIT License - see LICENSE for more details
